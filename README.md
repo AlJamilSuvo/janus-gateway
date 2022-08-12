@@ -1,3 +1,12 @@
+Changes from Original Repo
+===========================
+
+## Added remote connection lost and reconnect event
+
+Added two events in AudioBridgePlugin to detect whether remote participant lost connection and is he able to reconnect. An event with header `lost-connection` and connection lost user plublisher id will be sent to other user if any user lost his connection but he has not been removed from the room. There is a timeout period, if connection lost user able to reclaim his session within this timeout period then an event `reconnected` will be sent to other users.
+
+
+
 Janus WebRTC Server
 ===================
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-brightgreen.svg)](COPYING)
