@@ -599,6 +599,8 @@ struct janus_plugin_rtp {
 	char *buffer;
 	/*! \brief The packet length */
 	uint16_t length;
+	/*! \brief is stopped sending media*/
+	short is_stopped_sending_media;	
 	/*! \brief RTP extensions */
 	janus_plugin_rtp_extensions extensions;
 };

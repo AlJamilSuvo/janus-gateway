@@ -4257,6 +4257,17 @@ static gboolean janus_ice_outgoing_stats_handle(gpointer user_data) {
 							handle->handle_id, medium->type == JANUS_MEDIA_VIDEO ? "video" : "audio", vindex);
 					}
 					janus_ice_notify_media(handle, medium->mid, medium->type == JANUS_MEDIA_VIDEO, medium->rtcp_ctx[1] != NULL, vindex, FALSE);
+					
+					/*sending custom rtp packet to plugin to notify that user stopped sending media*/
+
+					janus_plugin_rtp rtp = {.is_stopped_sending_media =1 };
+					janus_plugin *plugin = (janus_plugin *) handle->app;
+					if (plugin && plugin->incoming_rtp && handle->app_handle &&
+						!g_atomic_int_get(&handle->app_handle->stopped) &&
+						!g_atomic_int_get(&handle->destroyed))
+						plugin->incoming_rtp(handle->app_handle, &rtp);
+
+
 				}
 			}
 		}

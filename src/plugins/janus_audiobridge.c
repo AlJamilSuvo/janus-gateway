@@ -1591,6 +1591,7 @@ typedef struct janus_audiobridge_participant {
 	gboolean mjr_active;		/* Whether this participant has to be recorded to an mjr file or not */
 	gchar *mjr_base;			/* Base name for the mjr recording (e.g., /path/to/filename, will generate /path/to/filename-audio.mjr) */
 	janus_recorder *arc;		/* The Janus recorder instance for this user's audio, if enabled */
+	short lost_connection;
 #ifdef HAVE_LIBOGG
 	janus_audiobridge_file *annc;	/* In case this is a fake participant, a playable file */
 #endif
@@ -5602,6 +5603,62 @@ void janus_audiobridge_incoming_rtp(janus_plugin_session *handle, janus_plugin_r
 		return;
 	if(participant->room && participant->room->muted && !participant->admin)
 		return;
+	
+	if(packet->is_stopped_sending_media) {
+		janus_mutex_lock(&participant->room->mutex);
+		json_t *event = json_object();
+		json_object_set_new(event, "audiobridge", json_string("lost-connection"));
+		json_object_set_new(event, "room",
+			string_ids ? json_string(participant->room ? participant->room->room_id_str : NULL) :
+				json_integer(participant->room ? participant->room->room_id : 0));
+		json_object_set_new(event, "id",
+				string_ids ? json_string(participant->user_id_str) : json_integer(participant->user_id));
+		/* Notify the speaker this event is related to as well */
+		janus_audiobridge_notify_participants(participant, event, TRUE);
+		json_decref(event);
+		participant->lost_connection = 1;
+		janus_mutex_unlock(&participant->room->mutex);
+
+		if(notify_events && gateway->events_is_enabled()) {
+			json_t *info = json_object();
+			json_object_set_new(info, "audiobridge", json_string("lost-connection"));
+			json_object_set_new(info, "room",
+				string_ids ? json_string(participant->room ? participant->room->room_id_str : NULL) :
+				json_integer(participant->room ? participant->room->room_id : 0));
+				json_object_set_new(info, "id",
+					string_ids ? json_string(participant->user_id_str) : json_integer(participant->user_id));
+				gateway->notify_event(&janus_audiobridge_plugin, session->handle, info);
+		}
+		return;
+	}
+
+	if(participant->lost_connection) {
+		janus_mutex_lock(&participant->room->mutex);
+		json_t *event = json_object();
+		json_object_set_new(event, "audiobridge", json_string("reconnected"));
+		json_object_set_new(event, "room",
+			string_ids ? json_string(participant->room ? participant->room->room_id_str : NULL) :
+				json_integer(participant->room ? participant->room->room_id : 0));
+		json_object_set_new(event, "id",
+				string_ids ? json_string(participant->user_id_str) : json_integer(participant->user_id));
+		/* Notify the speaker this event is related to as well */
+		janus_audiobridge_notify_participants(participant, event, TRUE);
+		json_decref(event);
+		participant->lost_connection = 0;
+		janus_mutex_unlock(&participant->room->mutex);
+
+		if(notify_events && gateway->events_is_enabled()) {
+			json_t *info = json_object();
+			json_object_set_new(info, "audiobridge", json_string("reconnected"));
+			json_object_set_new(info, "room",
+				string_ids ? json_string(participant->room ? participant->room->room_id_str : NULL) :
+				json_integer(participant->room ? participant->room->room_id : 0));
+				json_object_set_new(info, "id",
+					string_ids ? json_string(participant->user_id_str) : json_integer(participant->user_id));
+				gateway->notify_event(&janus_audiobridge_plugin, session->handle, info);
+		}
+	}
+
 	char *buf = packet->buffer;
 	uint16_t len = packet->length;
 	/* Save the frame if we're recording this leg */

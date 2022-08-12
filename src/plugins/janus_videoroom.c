@@ -8233,6 +8233,7 @@ void janus_videoroom_incoming_rtp(janus_plugin_session *handle, janus_plugin_rtp
 	janus_videoroom_publisher *participant = janus_videoroom_session_get_publisher_nodebug(session);
 	if(participant == NULL)
 		return;
+	if(pkt->is_stopped_sending_media) return;
 	janus_videoroom_incoming_rtp_internal(session, participant, pkt);
 }
 static void janus_videoroom_incoming_rtp_internal(janus_videoroom_session *session, janus_videoroom_publisher *participant, janus_plugin_rtp *pkt) {
