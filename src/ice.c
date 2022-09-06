@@ -4155,7 +4155,7 @@ static gboolean janus_ice_outgoing_rtcp_handle(gpointer user_data) {
 			if(rtcp_ctx == NULL) {
 				sr->si.rtp_ts = htonl(medium->last_rtp_ts);	/* FIXME */
 			} else {
-				int64_t ntp = tv.tv_sec*G_USEC_PER_SEC + tv.tv_usec;
+				int64_t ntp = ((int64_t)tv.tv_sec)*G_USEC_PER_SEC + tv.tv_usec;
 				uint32_t rtp_ts = ((ntp-medium->last_ntp_ts)*(rtcp_ctx->tb))/1000000 + medium->last_rtp_ts;
 				sr->si.rtp_ts = htonl(rtp_ts);
 			}
@@ -4933,8 +4933,14 @@ void janus_ice_relay_rtcp_internal(janus_ice_handle *handle, janus_ice_peerconne
 }
 
 void janus_ice_relay_rtcp(janus_ice_handle *handle, janus_plugin_rtcp *packet) {
+	if(!handle || packet == NULL || packet->buffer == NULL)
+		return;
 	/* Find the right medium instance */
 	janus_mutex_lock(&handle->mutex);
+	if(!handle->pc || !handle->pc->media || !handle->pc->media_bytype) {
+		janus_mutex_unlock(&handle->mutex);
+		return;
+	}
 	janus_ice_peerconnection_medium *medium = (packet->mindex != -1 ?
 			g_hash_table_lookup(handle->pc->media, GINT_TO_POINTER(packet->mindex)) :
 			g_hash_table_lookup(handle->pc->media_bytype,
