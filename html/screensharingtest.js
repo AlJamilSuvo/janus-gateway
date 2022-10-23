@@ -363,7 +363,7 @@ function shareScreen() {
 	var create = {
 		request: "create",
 		description: desc,
-		bitrate: 500000,
+		bitrate: 5000000,
 		publishers: 1
 	};
 	screentest.send({ message: create, success: function(result) {
